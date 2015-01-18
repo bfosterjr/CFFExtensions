@@ -13,7 +13,7 @@ This repository contains several simple extension to CFF Explorer ( [http://www.
 
 ## Installation ##
 
-To install simply run the setup program and ensure that your installation path is within the:
+To install, simply [download](https://github.com/bfosterjr/CFFExtensions/raw/master/bin/CFFExtensions_1.0.0_setup.exe) and run the setup program. Ensure that your installation path is within the:
 
 	'Extensions\CFF Explorer' 
 
