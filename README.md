@@ -4,11 +4,11 @@
 
 This repository contains several simple extension to CFF Explorer ( [http://www.ntcore.com/exsuite.php](http://www.ntcore.com/exsuite.php) ) by Daniel Pistelli. These include:
 
- * CFFStrings
+ * [CFFStrings](https://github.com/bfosterjr/CFFExtensions/tree/master/CFFStrings)
 	 * Finds ASCII and Unicode strings within files
- * CFFHashes
-	 * Calculates CRC, MD5, and SHA1 hashes for files and parts of files
- * CFFYara
+ * [CFFHashes](https://github.com/bfosterjr/CFFExtensions/tree/master/CFFHashes)
+	 * Calculates CRC, MD5, SHA1 and SHA256 hashes for files and parts of files
+ * [CFFYara](https://github.com/bfosterjr/CFFExtensions/tree/master/CFFYara)
 	 * Enables Yara scanning from with CFF Explorer.
 
 ## Installation ##
@@ -23,4 +23,6 @@ folder of your CFF Explorer installation directory.
 
 When you launch CFF Explorer, 3 new items will be displayed: 'String', 'Hashes' and 'Yara' as shown below:
 
-![](https://raw.githubusercontent.com/bfosterjr/CFFExtensions/CFFYara/cffyara.png)
+![](https://github.com/bfosterjr/CFFExtensions/raw/master/CFFYara/cffyara.png)
+
+

@@ -4,15 +4,7 @@
 
 CFFHashes is a simple extension to CFF Explorer ( [http://www.ntcore.com/exsuite.php](http://www.ntcore.com/exsuite.php) ) by Daniel Pistelli. This extension provides CRC32, MD5, SHA1 and SHA256 hashes of various parts of PE file. You can also perform a custom hash on any area of the file.
 
-A 'Check VirusTotal' button is provided to quickly check and see if the calculated SHA256 has been reported previously.
-
-## Installation ##
-
-To install CFFHashes simply copy the appropriate DLL (x86 or x64) into the:
-
-	'Extensions\CFF Explorer' 
-
-folder within your CFF Explorer installation directory. 
+A 'Check VirusTotal' button is provided to quickly check and see if the calculated SHA256 has been reported previously. 
 
 ## Usage ##
 
