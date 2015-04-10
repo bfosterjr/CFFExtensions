@@ -332,14 +332,15 @@ HWND hDlg
 
 
 static
-void
+BOOL
 _findStrings
 (
     HWND    hDlg,
     DWORD   minLength,
     BOOL    ascii,
     BOOL    unicode,
-    BOOL    showOffset
+    BOOL    showOffset,
+    BOOL    searchBoth
 )
 {
 
@@ -365,9 +366,10 @@ _findStrings
 
     ResetEvent(g_event);
 
-    if (!g_stringsdone || minLength != g_lastlen || 
-        showOffset != g_showOffsets || g_prevunicode != unicode || 
-        g_lastObj != g_object || ascii != g_prevascii)
+    if (1)
+        //!g_stringsdone || minLength != g_lastlen || 
+        //showOffset != g_showOffsets || g_prevunicode != unicode || 
+        //g_lastObj != g_object || ascii != g_prevascii)
     {
         g_stringsdone = FALSE;
 
@@ -375,10 +377,11 @@ _findStrings
         fileend += filelen;
         steplen = filelen / 100;
 
-        Edit_SetText(GetDlgItem(hDlg, IDC_STATUS), "");
-        _resetStringList(hDlg);
-        _setViewColums(hDlg, showOffset, unicode && ascii);
-        SendDlgItemMessageA(hDlg, IDC_PROGRESS, PBM_SETPOS, 0, (LPARAM)0);
+        if (searchBoth)
+        {
+            steplen *= 2;
+        }
+
 
         while (fileptr + offset < fileend && !stop)
         {
@@ -396,7 +399,7 @@ _findStrings
 
                     if ((ascii && !isUnicode) || (unicode && isUnicode))
                     {
-                        _insertString(hDlg, str, strlen + 1, showOffset, offset, (unicode && ascii), isUnicode, index);
+                        _insertString(hDlg, str, strlen + 1, showOffset, offset, searchBoth, isUnicode, index);
                         index++;
                     }
                 }
@@ -420,8 +423,7 @@ _findStrings
                 stop = TRUE;
             }
         }
-        ListView_SetColumnWidth(GetDlgItem(hDlg, IDC_STRINGLIST), showOffset + unicode, longestStr * PIXELS_PER_CHAR);
-        SendDlgItemMessageA(hDlg, IDC_PROGRESS, PBM_SETPOS, 100, (LPARAM)0);
+        ListView_SetColumnWidth(GetDlgItem(hDlg, IDC_STRINGLIST), showOffset + searchBoth, longestStr * PIXELS_PER_CHAR);
 
         if (!stop)
         {
@@ -439,6 +441,7 @@ _findStrings
             g_prevascii = ascii;
         }
     }
+    return stop || err;
 }
 
 
@@ -449,12 +452,31 @@ _findStringThreadFunc
     PVOID arg
 )
 {
-    PTHREAD_ARGS    findStringsArg = (PTHREAD_ARGS)arg;
+    PTHREAD_ARGS    findStringsArg  = (PTHREAD_ARGS)arg;
+    HWND            hDlg            = NULL;
+    BOOL            stop            = FALSE;
     __try
     {
-        _findStrings(findStringsArg->hDlg, findStringsArg->minLen,
-                    findStringsArg->ascii, findStringsArg->unicode, 
-                    findStringsArg->offsets);
+        hDlg = findStringsArg->hDlg;
+        Edit_SetText(GetDlgItem(hDlg, IDC_STATUS), "");
+        _resetStringList(hDlg);
+        _setViewColums(hDlg, findStringsArg->offsets, 
+                        findStringsArg->ascii && findStringsArg->unicode);
+        SendDlgItemMessageA(hDlg, IDC_PROGRESS, PBM_SETPOS, 0, (LPARAM)0);
+        if (!stop && findStringsArg->ascii)
+        {
+            stop = _findStrings(findStringsArg->hDlg, findStringsArg->minLen,
+                findStringsArg->ascii, 0,
+                findStringsArg->offsets, findStringsArg->unicode && findStringsArg->ascii);
+        }
+        if (!stop && findStringsArg->unicode)
+        {
+            stop = _findStrings(findStringsArg->hDlg, findStringsArg->minLen,
+                0, findStringsArg->unicode,
+                findStringsArg->offsets, findStringsArg->unicode && findStringsArg->ascii);
+        }
+
+        SendDlgItemMessageA(hDlg, IDC_PROGRESS, PBM_SETPOS, 100, (LPARAM)0);
     }
     __finally
     {

@@ -31,6 +31,8 @@ string
     {
         if (ASCII(input[offset]))
         {
+            //bug here.. will assume ascii.. and then skip valid unicode on next char..  consider 'KD.I.S.'
+            //will never see 'D.I.S.'  :(
             if (unicode && '\0' == input[offset + 1])
             {
                 while ( len < stringLen -1      && 
@@ -54,7 +56,7 @@ string
                 }
                 *isUnicode = 1;
             }
-            else
+            else if (!unicode)
             {
                 while ( len < stringLen - 1 &&
                         offset < inputSize  &&
