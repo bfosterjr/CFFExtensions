@@ -16,7 +16,7 @@
 
 PBYTE       g_object        = NULL;
 BOOL        g_stringsdone   = FALSE;
-int         g_lastlen       = 0;
+//int         g_lastlen       = 0;
 BOOL        g_prevunicode   = FALSE;
 HANDLE      g_thread        = NULL;
 HANDLE      g_event         = NULL;
@@ -366,81 +366,68 @@ _findStrings
 
     ResetEvent(g_event);
 
-    if (1)
-        //!g_stringsdone || minLength != g_lastlen || 
-        //showOffset != g_showOffsets || g_prevunicode != unicode || 
-        //g_lastObj != g_object || ascii != g_prevascii)
+    filelen = CFFApi.eaGetObjectSize(hDlg);
+    fileend += filelen;
+    steplen = filelen / 100;
+
+    if (searchBoth)
     {
-        g_stringsdone = FALSE;
-
-        filelen = CFFApi.eaGetObjectSize(hDlg);
-        fileend += filelen;
-        steplen = filelen / 100;
-
-        if (searchBoth)
-        {
-            steplen *= 2;
-        }
+        steplen *= 2;
+    }
 
 
-        while (fileptr + offset < fileend && !stop)
-        {
-            ZeroMemory(str, sizeof(str));
-            strlen = string(fileptr, filelen, offset, unicode, str, sizeof(str) - 1, &isUnicode);
+    while (fileptr + offset < fileend && !stop)
+    {
+        ZeroMemory(str, sizeof(str));
+        strlen = string(fileptr, filelen, offset, unicode, str, sizeof(str) - 1, &isUnicode);
             
-            if (strlen >= (int)minLength)
+        if (strlen >= (int)minLength)
+        {
+            if (index < MAXINT16)
             {
-                if (index < MAXINT16)
+                if (strlen > longestStr)
                 {
-                    if (strlen > longestStr)
-                    {
-                        longestStr = strlen;
-                    }
-
-                    if ((ascii && !isUnicode) || (unicode && isUnicode))
-                    {
-                        _insertString(hDlg, str, strlen + 1, showOffset, offset, searchBoth, isUnicode, index);
-                        index++;
-                    }
+                    longestStr = strlen;
                 }
-                else
+
+                if ((ascii && !isUnicode) || (unicode && isUnicode))
                 {
-                    Edit_SetText(GetDlgItem(hDlg, IDC_STATUS), "ERROR: Exceeded string display limit (~32K strings). Increase min string length.");
-                    err = TRUE;
-                    break;
+                    _insertString(hDlg, str, strlen + 1, showOffset, offset, searchBoth, isUnicode, index);
+                    index++;
                 }
             }
-
-            offset += (strlen == 0) ? 1 : (isUnicode ? strlen * 2 : strlen);
-
-            if (offset - stepOffset > (int)steplen)
+            else
             {
-                SendDlgItemMessageA(hDlg, IDC_PROGRESS, PBM_STEPIT, 0, (LPARAM)0);
-                stepOffset = offset;
-            }
-            if (WAIT_OBJECT_0 == WaitForSingleObject(g_event, 0))
-            {
-                stop = TRUE;
+                Edit_SetText(GetDlgItem(hDlg, IDC_STATUS), "ERROR: Exceeded string display limit (~32K strings). Increase min string length.");
+                err = TRUE;
+                break;
             }
         }
-        ListView_SetColumnWidth(GetDlgItem(hDlg, IDC_STRINGLIST), showOffset + searchBoth, longestStr * PIXELS_PER_CHAR);
 
-        if (!stop)
+        offset += (strlen == 0) ? 1 : (isUnicode ? strlen * 2 : strlen);
+
+        if (offset - stepOffset > (int)steplen)
         {
-            if (!err)
-            {
-                ZeroMemory(strsfound, sizeof(strsfound));
-                _snprintf_s(strsfound, sizeof(strsfound), sizeof(strsfound), "Found %d strings.", index);
-                Edit_SetText(GetDlgItem(hDlg, IDC_STATUS), strsfound);
-            }
-            g_lastlen = minLength;
-            g_stringsdone = TRUE;
-            g_prevunicode = unicode;
-            g_lastObj = g_object;
-            g_showOffsets = showOffset;
-            g_prevascii = ascii;
+            SendDlgItemMessageA(hDlg, IDC_PROGRESS, PBM_STEPIT, 0, (LPARAM)0);
+            stepOffset = offset;
+        }
+        if (WAIT_OBJECT_0 == WaitForSingleObject(g_event, 0))
+        {
+            stop = TRUE;
         }
     }
+    ListView_SetColumnWidth(GetDlgItem(hDlg, IDC_STRINGLIST), showOffset + searchBoth, longestStr * PIXELS_PER_CHAR);
+
+    if (!stop)
+    {
+        if (!err)
+        {
+            ZeroMemory(strsfound, sizeof(strsfound));
+            _snprintf_s(strsfound, sizeof(strsfound), sizeof(strsfound), "Found %d strings.", index);
+            Edit_SetText(GetDlgItem(hDlg, IDC_STATUS), strsfound);
+        }
+    }
+
     return stop || err;
 }
 
@@ -463,19 +450,26 @@ _findStringThreadFunc
         _setViewColums(hDlg, findStringsArg->offsets, 
                         findStringsArg->ascii && findStringsArg->unicode);
         SendDlgItemMessageA(hDlg, IDC_PROGRESS, PBM_SETPOS, 0, (LPARAM)0);
+        g_stringsdone = FALSE;
+        g_prevascii = FALSE;
+        g_prevunicode = FALSE;
+        g_lastObj = g_object;
+        g_showOffsets = findStringsArg->offsets;
         if (!stop && findStringsArg->ascii)
         {
             stop = _findStrings(findStringsArg->hDlg, findStringsArg->minLen,
                 findStringsArg->ascii, 0,
                 findStringsArg->offsets, findStringsArg->unicode && findStringsArg->ascii);
+            g_prevascii = TRUE;
         }
         if (!stop && findStringsArg->unicode)
         {
             stop = _findStrings(findStringsArg->hDlg, findStringsArg->minLen,
                 0, findStringsArg->unicode,
                 findStringsArg->offsets, findStringsArg->unicode && findStringsArg->ascii);
+            g_prevunicode = TRUE;
         }
-
+        g_stringsdone = TRUE;
         SendDlgItemMessageA(hDlg, IDC_PROGRESS, PBM_SETPOS, 100, (LPARAM)0);
     }
     __finally
@@ -509,7 +503,6 @@ LRESULT CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
         g_object = (PBYTE)CFFApi.eaGetObjectAddress(hDlg);
         g_stringsdone = FALSE;
         g_prevunicode = FALSE;
-        g_lastlen = 0;
         break;
     }
     case WM_DESTROY:
