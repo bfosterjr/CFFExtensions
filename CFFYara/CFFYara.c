@@ -396,11 +396,11 @@ _appendRuleToEditBox
 
                 if (STRING_IS_HEX(string))
                 {
-                    _appendHexString(yrOpts->hDlg, match->data, match->length);
+                    _appendHexString(yrOpts->hDlg, match->data, match->match_length);
                 }
                 else
                 {
-                    _appendString(yrOpts->hDlg, match->data, match->length);
+                    _appendString(yrOpts->hDlg, match->data, match->match_length);
                 }
 
                 _appendEditBox(yrOpts->hDlg, IDC_RESULT, "\r\n");

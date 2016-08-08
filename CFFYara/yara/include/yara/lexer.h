@@ -1,17 +1,30 @@
 /*
 Copyright (c) 2007. Victor M. Alvarez [plusvic@gmail.com].
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
 
-   http://www.apache.org/licenses/LICENSE-2.0
+1. Redistributions of source code must retain the above copyright notice, this
+list of conditions and the following disclaimer.
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+2. Redistributions in binary form must reproduce the above copyright notice,
+this list of conditions and the following disclaimer in the documentation and/or
+other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors
+may be used to endorse or promote products derived from this software without
+specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <yara/compiler.h>
@@ -51,6 +64,20 @@ typedef void* yyscan_t;
 #ifndef YY_TYPEDEF_EXPRESSION_T
 #define YY_TYPEDEF_EXPRESSION_T
 
+
+// Expression type constants are powers of two because they are used as flags.
+// For example:
+//   CHECK_TYPE(whatever, EXPRESSION_TYPE_INTEGER | EXPRESSION_TYPE_FLOAT)
+// The expression above is used to ensure that the type of "whatever" is either
+// integer or float.
+
+#define EXPRESSION_TYPE_BOOLEAN   1
+#define EXPRESSION_TYPE_INTEGER   2
+#define EXPRESSION_TYPE_STRING    4
+#define EXPRESSION_TYPE_REGEXP    8
+#define EXPRESSION_TYPE_OBJECT    16
+#define EXPRESSION_TYPE_FLOAT     32
+
 typedef struct _EXPRESSION
 {
   int type;
@@ -58,6 +85,7 @@ typedef struct _EXPRESSION
   union {
     int64_t integer;
     YR_OBJECT* object;
+    SIZED_STRING* sized_string;
   } value;
 
   const char* identifier;
@@ -98,7 +126,8 @@ void yyerror(
 
 void yywarning(
     yyscan_t yyscanner,
-    const char *warning_message);
+    const char *message_fmt,
+    ...);
 
 void yyfatal(
     yyscan_t yyscanner,

@@ -1,21 +1,36 @@
 /*
 Copyright (c) 2013. The YARA Authors. All Rights Reserved.
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
 
-   http://www.apache.org/licenses/LICENSE-2.0
+1. Redistributions of source code must retain the above copyright notice, this
+list of conditions and the following disclaimer.
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+2. Redistributions in binary form must reproduce the above copyright notice,
+this list of conditions and the following disclaimer in the documentation and/or
+other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors
+may be used to endorse or promote products derived from this software without
+specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #ifndef YR_RE_H
 #define YR_RE_H
+
+#include <ctype.h>
 
 #include <yara/arena.h>
 #include <yara/sizedstr.h>
@@ -38,6 +53,8 @@ limitations under the License.
 #define RE_NODE_EMPTY               16
 #define RE_NODE_ANCHOR_START        17
 #define RE_NODE_ANCHOR_END          18
+#define RE_NODE_WORD_BOUNDARY       19
+#define RE_NODE_NON_WORD_BOUNDARY   20
 
 
 #define RE_OPCODE_ANY                   0xA0
@@ -54,35 +71,45 @@ limitations under the License.
 #define RE_OPCODE_DIGIT                 0xAB
 #define RE_OPCODE_NON_DIGIT             0xAC
 #define RE_OPCODE_MATCH                 0xAD
-#define RE_OPCODE_MATCH_AT_END          0xAE
-#define RE_OPCODE_MATCH_AT_START        0xAF
 
-#define RE_OPCODE_SPLIT_A               0xB0
-#define RE_OPCODE_SPLIT_B               0xB1
-#define RE_OPCODE_PUSH                  0xB2
-#define RE_OPCODE_POP                   0xB3
-#define RE_OPCODE_JNZ                   0xB4
-#define RE_OPCODE_JUMP                  0xB5
+#define RE_OPCODE_MATCH_AT_END          0xB0
+#define RE_OPCODE_MATCH_AT_START        0xB1
+#define RE_OPCODE_WORD_BOUNDARY         0xB2
+#define RE_OPCODE_NON_WORD_BOUNDARY     0xB3
+
+#define RE_OPCODE_SPLIT_A               0xC0
+#define RE_OPCODE_SPLIT_B               0xC1
+#define RE_OPCODE_PUSH                  0xC2
+#define RE_OPCODE_POP                   0xC3
+#define RE_OPCODE_JNZ                   0xC4
+#define RE_OPCODE_JUMP                  0xC5
 
 
-#define RE_FLAGS_FAST_HEX_REGEXP          0x02
-#define RE_FLAGS_BACKWARDS                0x04
-#define RE_FLAGS_EXHAUSTIVE               0x08
-#define RE_FLAGS_WIDE                     0x10
-#define RE_FLAGS_NO_CASE                  0x20
-#define RE_FLAGS_SCAN                     0x40
-#define RE_FLAGS_DOT_ALL                  0x80
-#define RE_FLAGS_NOT_AT_START            0x100
+#define RE_FLAGS_FAST_HEX_REGEXP        0x02
+#define RE_FLAGS_BACKWARDS              0x04
+#define RE_FLAGS_EXHAUSTIVE             0x08
+#define RE_FLAGS_WIDE                   0x10
+#define RE_FLAGS_NO_CASE                0x20
+#define RE_FLAGS_SCAN                   0x40
+#define RE_FLAGS_DOT_ALL                0x80
+#define RE_FLAGS_NOT_AT_START          0x100
+#define RE_FLAGS_GREEDY                0x400
+#define RE_FLAGS_UNGREEDY              0x800
 
 
 typedef struct RE RE;
 typedef struct RE_NODE RE_NODE;
 typedef struct RE_ERROR RE_ERROR;
 
+typedef uint8_t RE_SPLIT_ID_TYPE;
 typedef uint8_t* RE_CODE;
 
 #define CHAR_IN_CLASS(chr, cls)  \
     ((cls)[(chr) / 8] & 1 << ((chr) % 8))
+
+
+#define IS_WORD_CHAR(chr) \
+    (isalnum(chr) || (chr) == '_')
 
 
 struct RE_NODE

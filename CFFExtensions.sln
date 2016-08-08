@@ -9,6 +9,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CFFStrings", "CFFStrings\CF
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CFFYara", "CFFYara\CFFYara.vcxproj", "{2E1DBE9C-7E48-472E-B062-72E88A978C88}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CFFCapstone", "CFFCapstone\CFFCapstone.vcxproj", "{D9A58F27-6E74-4FC7-983D-1F048C2B265B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -41,6 +43,13 @@ Global
 		{2E1DBE9C-7E48-472E-B062-72E88A978C88}.Release|Win32.Build.0 = Release|Win32
 		{2E1DBE9C-7E48-472E-B062-72E88A978C88}.Release|x64.ActiveCfg = Release|x64
 		{2E1DBE9C-7E48-472E-B062-72E88A978C88}.Release|x64.Build.0 = Release|x64
+		{D9A58F27-6E74-4FC7-983D-1F048C2B265B}.Debug|Win32.ActiveCfg = Debug|Win32
+		{D9A58F27-6E74-4FC7-983D-1F048C2B265B}.Debug|Win32.Build.0 = Debug|Win32
+		{D9A58F27-6E74-4FC7-983D-1F048C2B265B}.Debug|x64.ActiveCfg = Debug|x64
+		{D9A58F27-6E74-4FC7-983D-1F048C2B265B}.Debug|x64.Build.0 = Debug|x64
+		{D9A58F27-6E74-4FC7-983D-1F048C2B265B}.Release|Win32.ActiveCfg = Release|Win32
+		{D9A58F27-6E74-4FC7-983D-1F048C2B265B}.Release|Win32.Build.0 = Release|Win32
+		{D9A58F27-6E74-4FC7-983D-1F048C2B265B}.Release|x64.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

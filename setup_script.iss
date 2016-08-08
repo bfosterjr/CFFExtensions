@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "CFFExtensions"
-#define MyAppVersion "1.0.2"
+#define MyAppVersion "1.0.3"
 #define MyAppPublisher "@bfosterjr"
 #define MyAppURL "@bfosterjr"
 
@@ -34,9 +34,11 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Source: ".\bin\x64\Release\CFFHashes.dll"; DestDir: "{app}"; Check: Is64BitInstallMode; Flags: ignoreversion
 Source: ".\bin\x64\Release\CFFStrings.dll"; DestDir: "{app}"; Check: Is64BitInstallMode; Flags: ignoreversion
 Source: ".\bin\x64\Release\CFFYara.dll"; DestDir: "{app}"; Check: Is64BitInstallMode; Flags: ignoreversion
+Source: ".\bin\x64\Release\CFFCapstone.dll"; DestDir: "{app}"; Check: Is64BitInstallMode; Flags: ignoreversion
 Source: ".\bin\x86\Release\CFFHashes.dll"; DestDir: "{app}"; Check: not Is64BitInstallMode; Flags: solidbreak
 Source: ".\bin\x86\Release\CFFStrings.dll"; DestDir: "{app}"; Check: not is64BitInstallMode; Flags: ignoreversion
 Source: ".\bin\x86\Release\CFFYara.dll"; DestDir: "{app}"; Check: not Is64BitInstallMode; Flags: ignoreversion
+Source: ".\bin\x86\Release\CFFCapstone.dll"; DestDir: "{app}"; Check: not Is64BitInstallMode; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"

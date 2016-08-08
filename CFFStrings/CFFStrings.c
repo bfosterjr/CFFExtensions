@@ -17,7 +17,7 @@
 PBYTE       g_object        = NULL;
 BOOL        g_stringsdone   = FALSE;
 //int         g_lastlen       = 0;
-BOOL        g_prevunicode   = FALSE;
+BOOL        g_prevwide   = FALSE;
 HANDLE      g_thread        = NULL;
 HANDLE      g_event         = NULL;
 PVOID       g_lastObj       = NULL;
@@ -31,7 +31,7 @@ typedef struct _THREAD_ARGS
 {
     HWND    hDlg;
     int     minLen;
-    BOOL    unicode;
+    BOOL    wide;
     BOOL    ascii;
     BOOL    offsets;
 }THREAD_ARGS, *PTHREAD_ARGS;
@@ -130,7 +130,7 @@ _saveListView
     int     len                 = 0;
     DWORD   bytesWritten        = 0;
     PCHAR   lineFeed            = "\r\n";
-    BOOL    type                = (g_prevascii && g_prevunicode);
+    BOOL    type                = (g_prevascii && g_prevwide);
     BOOL    offset              = g_showOffsets;
     BOOL    headers             = type || offset;
     LVITEM  lvi                 = { 0 };
@@ -275,7 +275,7 @@ _insertString
     BOOL showOffset,
     int offset,
     BOOL showType,
-    BOOL unicode,
+    BOOL wide,
     int index
 )
 {
@@ -288,7 +288,7 @@ _insertString
     if (showType)
     {
         lvi.mask = LVIF_TEXT;
-        lvi.pszText = unicode ? "U" : "A";
+        lvi.pszText = wide ? "W" : "A";
         lvi.cchTextMax = 2;
         lvi.iItem = index;
         lvi.iSubItem = subitem;
@@ -338,7 +338,7 @@ _findStrings
     HWND    hDlg,
     DWORD   minLength,
     BOOL    ascii,
-    BOOL    unicode,
+    BOOL    wide,
     BOOL    showOffset,
     BOOL    searchBoth
 )
@@ -354,7 +354,7 @@ _findStrings
     int     index       = 0;
     DWORD   steplen     = 0;
     int     stepOffset  = 0;
-    char    isUnicode   = 0;
+    char    iswide   = 0;
     int     longestStr  = 0;
     BOOL    stop        = FALSE;
     BOOL    err         = FALSE;
@@ -379,7 +379,7 @@ _findStrings
     while (fileptr + offset < fileend && !stop)
     {
         ZeroMemory(str, sizeof(str));
-        strlen = string(fileptr, filelen, offset, unicode, str, sizeof(str) - 1, &isUnicode);
+        strlen = string(fileptr, filelen, offset, wide, str, sizeof(str) - 1, &iswide);
             
         if (strlen >= (int)minLength)
         {
@@ -390,9 +390,9 @@ _findStrings
                     longestStr = strlen;
                 }
 
-                if ((ascii && !isUnicode) || (unicode && isUnicode))
+                if ((ascii && !iswide) || (wide && iswide))
                 {
-                    _insertString(hDlg, str, strlen + 1, showOffset, offset, searchBoth, isUnicode, index);
+                    _insertString(hDlg, str, strlen + 1, showOffset, offset, searchBoth, iswide, index);
                     index++;
                 }
             }
@@ -404,7 +404,7 @@ _findStrings
             }
         }
 
-        offset += (strlen == 0) ? 1 : (isUnicode ? strlen * 2 : strlen);
+        offset += (strlen == 0) ? 1 : (iswide ? strlen * 2 : strlen);
 
         if (offset - stepOffset > (int)steplen)
         {
@@ -448,26 +448,26 @@ _findStringThreadFunc
         Edit_SetText(GetDlgItem(hDlg, IDC_STATUS), "");
         _resetStringList(hDlg);
         _setViewColums(hDlg, findStringsArg->offsets, 
-                        findStringsArg->ascii && findStringsArg->unicode);
+                        findStringsArg->ascii && findStringsArg->wide);
         SendDlgItemMessageA(hDlg, IDC_PROGRESS, PBM_SETPOS, 0, (LPARAM)0);
         g_stringsdone = FALSE;
         g_prevascii = FALSE;
-        g_prevunicode = FALSE;
+        g_prevwide = FALSE;
         g_lastObj = g_object;
         g_showOffsets = findStringsArg->offsets;
         if (!stop && findStringsArg->ascii)
         {
             stop = _findStrings(findStringsArg->hDlg, findStringsArg->minLen,
                 findStringsArg->ascii, 0,
-                findStringsArg->offsets, findStringsArg->unicode && findStringsArg->ascii);
+                findStringsArg->offsets, findStringsArg->wide && findStringsArg->ascii);
             g_prevascii = TRUE;
         }
-        if (!stop && findStringsArg->unicode)
+        if (!stop && findStringsArg->wide)
         {
             stop = _findStrings(findStringsArg->hDlg, findStringsArg->minLen,
-                0, findStringsArg->unicode,
-                findStringsArg->offsets, findStringsArg->unicode && findStringsArg->ascii);
-            g_prevunicode = TRUE;
+                0, findStringsArg->wide,
+                findStringsArg->offsets, findStringsArg->wide && findStringsArg->ascii);
+            g_prevwide = TRUE;
         }
         g_stringsdone = TRUE;
         SendDlgItemMessageA(hDlg, IDC_PROGRESS, PBM_SETPOS, 100, (LPARAM)0);
@@ -502,7 +502,7 @@ LRESULT CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
         CheckDlgButton(hDlg, IDC_ASCII, BST_CHECKED);
         g_object = (PBYTE)CFFApi.eaGetObjectAddress(hDlg);
         g_stringsdone = FALSE;
-        g_prevunicode = FALSE;
+        g_prevwide = FALSE;
         break;
     }
     case WM_DESTROY:
@@ -552,9 +552,9 @@ LRESULT CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
                         findStringsArg->minLen = atoi(minLenStr);
                     }
 
-                    if (IsDlgButtonChecked(hDlg, IDC_UNICODE) == BST_CHECKED)
+                    if (IsDlgButtonChecked(hDlg, IDC_WIDE) == BST_CHECKED)
                     {
-                        findStringsArg->unicode = TRUE;
+                        findStringsArg->wide = TRUE;
                     }
 
                     if (IsDlgButtonChecked(hDlg, IDC_OFFSETS) == BST_CHECKED)

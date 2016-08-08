@@ -10,6 +10,9 @@ This repository contains several simple extension to CFF Explorer ( [http://www.
 	 * Calculates CRC, MD5, SHA1 and SHA256 hashes for files and parts of files
  * [CFFYara](https://github.com/bfosterjr/CFFExtensions/tree/master/CFFYara)
 	 * Enables Yara scanning from with CFF Explorer.
+ * [CFFCapstone](https://github.com/bfosterjr/CFFExtensions/tree/master/CFFCapstone)
+	 * Capstone disassembly from with CFF Explorer (only x86/x64 supported right now)
+
 
 ## Installation ##
 
@@ -21,8 +24,8 @@ folder of your CFF Explorer installation directory.
 
 ## Usage ##
 
-When you launch CFF Explorer, 3 new items will be displayed: 'String', 'Hashes' and 'Yara' as shown below:
+When you launch CFF Explorer, 3 new items will be displayed: 'String', 'Hashes', 'Yara', and 'Capstone' as shown below:
 
-![](https://github.com/bfosterjr/CFFExtensions/raw/master/CFFYara/cffyara.png)
+![](https://github.com/bfosterjr/CFFExtensions/raw/master/CFFCapstone/cffcapstone.png)
 
 

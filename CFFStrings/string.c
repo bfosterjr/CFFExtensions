@@ -12,10 +12,10 @@ string
     char* input,
     int   inputSize,
     int   offset,
-    char  unicode,
+    char  wide,
     char* string,
     int   stringLen,
-    char* isUnicode
+    char* isWide
 )
 {
     int len         = 0;
@@ -23,7 +23,7 @@ string
 
     if (0 == input || 0 == inputSize || 
         0 == string || 0 == stringLen || 
-        offset >= inputSize - 1 || 0 == isUnicode)
+        offset >= inputSize - 1 || 0 == isWide)
     {
 
     }
@@ -31,9 +31,9 @@ string
     {
         if (ASCII(input[offset]))
         {
-            //bug here.. will assume ascii.. and then skip valid unicode on next char..  consider 'KD.I.S.'
+            //bug here?.. will assume ascii.. and then skip valid wide char on next char..  consider 'KD.I.S.'
             //will never see 'D.I.S.'  :(
-            if (unicode && '\0' == input[offset + 1])
+            if (wide && '\0' == input[offset + 1])
             {
                 while ( len < stringLen -1      && 
                         offset < inputSize - 1  &&
@@ -54,9 +54,9 @@ string
                     retVal++;
                     offset+=2;
                 }
-                *isUnicode = 1;
+                *isWide = 1;
             }
-            else if (!unicode)
+            else if (!wide)
             {
                 while ( len < stringLen - 1 &&
                         offset < inputSize  &&
@@ -76,7 +76,7 @@ string
                     retVal++;
                     offset++;
                 }
-                *isUnicode = 0;
+                *isWide = 0;
             }
         }
     }
