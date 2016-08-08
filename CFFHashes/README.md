@@ -10,4 +10,4 @@ A 'Check VirusTotal' button is provided to quickly check and see if the calculat
 
 When you launch CFF Explorer, a new 'Hashes' item will be displayed. You can quickly view hashes of common file areas, or simply specify your own file offset and length  (in hex) to calculate the hashes of a custom range in the file.
 
-![](https://raw.githubusercontent.com/bfosterjr/CFFHashes/master/cffhashes.png)
+![](https://github.com/bfosterjr/CFFExtensions/raw/master/CFFHashes/cffhashes.png)
