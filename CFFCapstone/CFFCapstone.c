@@ -107,6 +107,80 @@ __declspec(dllexport) VOID *  __cdecl ExtensionExecute(LPARAM lParam)
 
 static
 void
+_saveListView
+(
+PCHAR   filepath,
+HWND    hDlg
+)
+{
+    HANDLE  hFile = INVALID_HANDLE_VALUE;
+    int     listCount = 0;
+    int     i = 0;
+    CHAR    full_str[256] = { 0 };
+    int     len = 0;
+    DWORD   bytesWritten = 0;
+    PCHAR   lineFeed = "\r\n";
+    LVITEM  lvi = { 0 };
+    CHAR    addr_str[11] = { 0 };
+    CHAR    bytesStr[17] = { 0 };
+    CHAR    inst_str[200] = { 0 };
+
+    __try
+    {
+        hFile = CreateFileA(filepath, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_WRITE,
+            NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+        if (INVALID_HANDLE_VALUE != hFile)
+        {
+            if (0 < (listCount = (int)ListView_GetItemCount(GetDlgItem(hDlg, IDC_DISM_OUTPUT))))
+            {
+                for (i = 0; i < listCount; i++)
+                {
+                    ZeroMemory(addr_str, sizeof(addr_str));
+                    lvi.mask = LVIF_TEXT;
+                    lvi.iItem = i;
+                    lvi.iSubItem = 0;
+                    lvi.cchTextMax = sizeof(addr_str);
+                    lvi.pszText = addr_str;
+                    SendDlgItemMessageA(hDlg, IDC_DISM_OUTPUT, LVM_GETITEMTEXT, i, (LPARAM)&lvi);
+
+                    ZeroMemory(bytesStr, sizeof(bytesStr));
+                    lvi.mask = LVIF_TEXT;
+                    lvi.iItem = i;
+                    lvi.iSubItem = 1;
+                    lvi.cchTextMax = sizeof(bytesStr);
+                    lvi.pszText = bytesStr;
+                    SendDlgItemMessageA(hDlg, IDC_DISM_OUTPUT, LVM_GETITEMTEXT, i, (LPARAM)&lvi);
+
+                    ZeroMemory(inst_str, sizeof(inst_str));
+                    lvi.mask = LVIF_TEXT;
+                    lvi.iItem = i;
+                    lvi.iSubItem = 2;
+                    lvi.cchTextMax = sizeof(inst_str);
+                    lvi.pszText = inst_str;
+                    SendDlgItemMessageA(hDlg, IDC_DISM_OUTPUT, LVM_GETITEMTEXT, i, (LPARAM)&lvi);
+
+                    ZeroMemory(full_str, sizeof(full_str));
+                    _snprintf_s(full_str, sizeof(full_str), sizeof(full_str), "%s\t%16s\t%s",
+                        addr_str, bytesStr, inst_str);
+                    
+                    WriteFile(hFile, full_str, (DWORD) strlen(full_str), &bytesWritten, NULL);
+                    WriteFile(hFile, lineFeed, 2, &bytesWritten, NULL);
+                }
+            }
+        }
+    }
+    __finally
+    {
+        if (INVALID_HANDLE_VALUE != hFile)
+        {
+            CloseHandle(hFile);
+        }
+    }
+
+}
+
+static
+void
 _output_instruction
 (
     HWND        hDlg,
@@ -207,7 +281,7 @@ _setViewColums
     lvc.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT;
     lvc.fmt = LVCFMT_LEFT;
     lvc.pszText = "   Instruction   ";
-    lvc.cx = PIXELS_PER_CHAR * sizeof("   Instruction   ");
+    lvc.cx = PIXELS_PER_CHAR * sizeof("    Instruction    ");
     ListView_InsertColumn(GetDlgItem(hDlg, IDC_DISM_OUTPUT), 0, &lvc);
     ListView_SetColumnWidth(GetDlgItem(hDlg, IDC_DISM_OUTPUT), 0, LVSCW_AUTOSIZE_USEHEADER);
 
@@ -216,7 +290,7 @@ _setViewColums
     lvc.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT;
     lvc.fmt = LVCFMT_LEFT;
     lvc.pszText = "   OpCode   ";
-    lvc.cx = PIXELS_PER_CHAR * sizeof("   OpCpde   ");
+    lvc.cx = PIXELS_PER_CHAR * sizeof("     OpCpde     ");
     ListView_InsertColumn(GetDlgItem(hDlg, IDC_DISM_OUTPUT), 0, &lvc);
     ListView_SetColumnWidth(GetDlgItem(hDlg, IDC_DISM_OUTPUT), 0, LVSCW_AUTOSIZE_USEHEADER);
 
@@ -224,7 +298,7 @@ _setViewColums
     lvc.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT;
     lvc.fmt = LVCFMT_LEFT;
     lvc.pszText = "   Offset   ";
-    lvc.cx = PIXELS_PER_CHAR * sizeof("   Offset   ");
+    lvc.cx = PIXELS_PER_CHAR * sizeof("     Offset     ");
     ListView_InsertColumn(GetDlgItem(hDlg, IDC_DISM_OUTPUT), 0, &lvc);
     ListView_SetColumnWidth(GetDlgItem(hDlg, IDC_DISM_OUTPUT), 0, LVSCW_AUTOSIZE_USEHEADER);
 
@@ -245,6 +319,9 @@ LRESULT CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
     csh     capstone_hndl   = 0;
     cs_err  cap_err         = CS_ERR_OK;
     int     arch_index      = 0;
+    int     x86_index       = 0;
+    char            saveFilePath[MAX_PATH];
+    OPENFILENAMEA   saveFile;
 
     switch (uMsg)
     {
@@ -256,17 +333,39 @@ LRESULT CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 g_object = (PBYTE) CFFApi.eaGetObjectAddress(hDlg);
                 g_objectSize = (DWORD)CFFApi.eaGetObjectSize(hDlg);
             }
-            //TODO: add these back in..
-            //ComboBox_ResetContent(GetDlgItem(hDlg, IDC_ARCH_TYPE));
-            //ComboBox_AddString(GetDlgItem(hDlg, IDC_ARCH_TYPE), "ARM");
-            //ComboBox_AddString(GetDlgItem(hDlg, IDC_ARCH_TYPE), "ARM64");
-            //ComboBox_AddString(GetDlgItem(hDlg, IDC_ARCH_TYPE), "MIPS");
-            ComboBox_AddString(GetDlgItem(hDlg, IDC_ARCH_TYPE), "x86 / x64");
-            //ComboBox_AddString(GetDlgItem(hDlg, IDC_ARCH_TYPE), "PPC");
-            //ComboBox_AddString(GetDlgItem(hDlg, IDC_ARCH_TYPE), "SPARC");
-            //ComboBox_AddString(GetDlgItem(hDlg, IDC_ARCH_TYPE), "SPARC");
+            //Setup the asm types
+            ComboBox_ResetContent(GetDlgItem(hDlg, IDC_ARCH_TYPE));
+            ComboBox_AddString(GetDlgItem(hDlg, IDC_ARCH_TYPE), "ARM");
+            ComboBox_AddString(GetDlgItem(hDlg, IDC_ARCH_TYPE), "ARM64");
+            ComboBox_AddString(GetDlgItem(hDlg, IDC_ARCH_TYPE), "MIPS");
+            x86_index = ComboBox_AddString(GetDlgItem(hDlg, IDC_ARCH_TYPE), "x86 / x64");
+            ComboBox_AddString(GetDlgItem(hDlg, IDC_ARCH_TYPE), "PPC");
+            ComboBox_AddString(GetDlgItem(hDlg, IDC_ARCH_TYPE), "SPARC");
+            ComboBox_AddString(GetDlgItem(hDlg, IDC_ARCH_TYPE), "SPARC");
             //set x86/x64 as default
-            ComboBox_SetCurSel(GetDlgItem(hDlg, IDC_ARCH_TYPE), /*3*/ 0);
+            ComboBox_SetCurSel(GetDlgItem(hDlg, IDC_ARCH_TYPE), x86_index);
+
+            //Setup the asm types
+            ComboBox_ResetContent(GetDlgItem(hDlg, IDC_MODE_TYPE));
+            x86_index = ComboBox_AddString(GetDlgItem(hDlg, IDC_MODE_TYPE), "Little-Endian");
+            ComboBox_AddString(GetDlgItem(hDlg, IDC_MODE_TYPE), "32-bit ARM");
+            ComboBox_AddString(GetDlgItem(hDlg, IDC_MODE_TYPE), "16-bit mode (x86)");
+            ComboBox_AddString(GetDlgItem(hDlg, IDC_MODE_TYPE), "32-bit mode (x86)");
+            ComboBox_AddString(GetDlgItem(hDlg, IDC_MODE_TYPE), "64-bit mode (x86,PPC)");
+            ComboBox_AddString(GetDlgItem(hDlg, IDC_MODE_TYPE), "ARM THUMB(2)");
+            ComboBox_AddString(GetDlgItem(hDlg, IDC_MODE_TYPE), "ARM MClass (Cortex-M)");
+            ComboBox_AddString(GetDlgItem(hDlg, IDC_MODE_TYPE), "ARMv8 A32");
+            ComboBox_AddString(GetDlgItem(hDlg, IDC_MODE_TYPE), "MICRO (MIPS)");
+            ComboBox_AddString(GetDlgItem(hDlg, IDC_MODE_TYPE), "MIPS III");
+            ComboBox_AddString(GetDlgItem(hDlg, IDC_MODE_TYPE), "MIPS32R6");
+            ComboBox_AddString(GetDlgItem(hDlg, IDC_MODE_TYPE), "MIPSGP64");
+            ComboBox_AddString(GetDlgItem(hDlg, IDC_MODE_TYPE), "V9 (Sparc)");
+            ComboBox_AddString(GetDlgItem(hDlg, IDC_MODE_TYPE), "Big-Endian");
+            ComboBox_AddString(GetDlgItem(hDlg, IDC_MODE_TYPE), "Mips32");
+            ComboBox_AddString(GetDlgItem(hDlg, IDC_MODE_TYPE), "Mips64");
+
+            //set Little Endian as default
+            ComboBox_SetCurSel(GetDlgItem(hDlg, IDC_MODE_TYPE), x86_index);
 
             _setViewColums(hDlg);
             break;
@@ -276,6 +375,22 @@ LRESULT CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
         {
             switch (LOWORD(wParam))
             {
+            case IDC_SAVE:
+            {
+                ZeroMemory(saveFilePath, sizeof(saveFilePath));
+                ZeroMemory(&saveFile, sizeof(saveFile));
+                saveFile.lStructSize = sizeof(OPENFILENAMEA);
+                saveFile.lpstrFile = saveFilePath;
+                saveFile.nMaxFile = sizeof(saveFilePath);
+                saveFile.lpstrDefExt = ".txt";
+                saveFile.lpstrFilter = "Text File (.txt)\0*.txt\0\0";
+                saveFile.Flags = OFN_OVERWRITEPROMPT | OFN_HIDEREADONLY | OFN_CREATEPROMPT;
+                if (GetSaveFileNameA(&saveFile))
+                {
+                    _saveListView(saveFilePath, hDlg);
+                }
+                break;
+            }
             case IDC_DO_DISM:
             {
                 arch_index = ComboBox_GetCurSel(GetDlgItem(hDlg, IDC_ARCH_TYPE));
@@ -292,7 +407,7 @@ LRESULT CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 {
 
                 }
-                else if (CS_ERR_OK != (cap_err = cs_open(/*(cs_arch)arch_index*/CS_ARCH_X86, 0, &capstone_hndl)))
+                else if (CS_ERR_OK != (cap_err = cs_open(arch_index, 0, &capstone_hndl)))
                 {
 
                 }

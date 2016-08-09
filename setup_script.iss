@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "CFFExtensions"
-#define MyAppVersion "1.0.3"
+#define MyAppVersion "1.0.4"
 #define MyAppPublisher "@bfosterjr"
 #define MyAppURL "@bfosterjr"
 

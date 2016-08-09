@@ -11,12 +11,12 @@ This repository contains several simple extension to CFF Explorer ( [http://www.
  * [CFFYara](https://github.com/bfosterjr/CFFExtensions/tree/master/CFFYara)
 	 * Enables Yara scanning from with CFF Explorer.
  * [CFFCapstone](https://github.com/bfosterjr/CFFExtensions/tree/master/CFFCapstone)
-	 * Capstone disassembly from with CFF Explorer (only x86/x64 supported right now)
+	 * Capstone disassembly from with CFF Explorer
 
 
 ## Installation ##
 
-To install, simply [download](https://github.com/bfosterjr/CFFExtensions/raw/master/bin/CFFExtensions_1.0.3_setup.exe) and run the setup program. Ensure that your installation path is within the:
+To install, simply [download](https://github.com/bfosterjr/CFFExtensions/raw/master/bin/CFFExtensions_1.0.4_setup.exe) and run the setup program. Ensure that your installation path is within the:
 
 	'Extensions\CFF Explorer' 
 

@@ -2,7 +2,7 @@
 
 ----------
 
-CFFCapstone is a simple extension to CFF Explorer ( [http://www.ntcore.com/exsuite.php](http://www.ntcore.com/exsuite.php) ) by Daniel Pistelli. This extension provides Capstone ( [http://www.capstone-engine.org/](http://www.capstone-engine.org/) ) disassembly support on any area of the file. Currently only Intel x86/x64 disassembly is supported.
+CFFCapstone is a simple extension to CFF Explorer ( [http://www.ntcore.com/exsuite.php](http://www.ntcore.com/exsuite.php) ) by Daniel Pistelli. This extension provides Capstone ( [http://www.capstone-engine.org/](http://www.capstone-engine.org/) ) disassembly support on any area of the file.
 
 ## Usage ##
 
