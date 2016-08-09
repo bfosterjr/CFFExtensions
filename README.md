@@ -24,7 +24,7 @@ folder of your CFF Explorer installation directory.
 
 ## Usage ##
 
-When you launch CFF Explorer, 3 new items will be displayed: 'String', 'Hashes', 'Yara', and 'Capstone' as shown below:
+When you launch CFF Explorer, 4 new items will be displayed: 'String', 'Hashes', 'Yara', and 'Capstone' as shown below:
 
 ![](https://github.com/bfosterjr/CFFExtensions/raw/master/CFFCapstone/cffcapstone.png)
 
