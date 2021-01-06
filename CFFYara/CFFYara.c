@@ -23,6 +23,7 @@ typedef struct _YARA_OPTIONS
     BOOL offsets;
     UINT maxMatches;
     UINT matchCount;
+    BOOL rva;
 }YARA_OPTIONS, *PYARA_OPTIONS;
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)
@@ -53,6 +54,8 @@ UINT nCFFApiMask[] =
 {
     m_eaGetObjectAddress,
     m_eaGetObjectSize,
+    m_eaOffsetToRva,
+    m_eaIsRvaValid,
     (UINT)NULL
 };
 
@@ -60,6 +63,8 @@ typedef struct _CFFAPI
 {
     d_eaGetObjectAddress eaGetObjectAddress;
     d_eaGetObjectSize eaGetObjectSize;
+    d_eaOffsetToRva eaOffsetToRva;
+    d_eaIsRvaValid eaIsRvaValid;
 
 } CFFAPI, *PCFFAPI;
 
@@ -384,13 +389,36 @@ _appendRuleToEditBox
 
     if (yrOpts->offsets && doesMatch)
     {
+        VOID *base = NULL;
+        UINT size = 0;
+
+        if (yrOpts->rva) {
+            base = CFFApi.eaGetObjectAddress(yrOpts->hDlg);
+            size = CFFApi.eaGetObjectSize(yrOpts->hDlg);
+        }
+
         yr_rule_strings_foreach(rule, string)
         {
             yr_string_matches_foreach(string, match)
             {
                 ZeroMemory(offset, sizeof(offset));
-                _snprintf_s(offset, sizeof(offset), sizeof(offset), "\tOffset: %08X , Identifier: ", match->offset);
+                _snprintf_s(offset, sizeof(offset), sizeof(offset), "\tOffset: %08X ", match->offset);
                 _appendEditBox(yrOpts->hDlg, IDC_RESULT, offset);
+
+
+                if (yrOpts->rva) {
+
+                    DWORD rva = CFFApi.eaOffsetToRva(base, size, match->offset);
+                    if (CFFApi.eaIsRvaValid(base, size, rva)) {
+                        ZeroMemory(offset, sizeof(offset));
+                        _snprintf_s(offset, sizeof(offset), sizeof(offset), ", RVA: %08X ", rva);
+                        _appendEditBox(yrOpts->hDlg, IDC_RESULT, offset);
+                    } else {
+                        _appendEditBox(yrOpts->hDlg, IDC_RESULT, "RVA: NULL ");
+                    }
+                }
+
+                _appendEditBox(yrOpts->hDlg, IDC_RESULT, ", Identifier: ");
                 _appendEditBox(yrOpts->hDlg, IDC_RESULT, string->identifier);
                 _appendEditBox(yrOpts->hDlg, IDC_RESULT, " , String: ");
 
@@ -599,6 +627,11 @@ LRESULT CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 _saveEditBox(hDlg, IDC_RESULT, "txt", ".txt\0\0");
                 break;
             }
+            case IDC_OFFSETS:
+            {
+                EnableWindow(GetDlgItem(hDlg, IDC_RVA), IsDlgButtonChecked(hDlg, IDC_OFFSETS));
+                break;
+            }
             case IDC_RUNSCAN:
             {
                 yrOpts.hDlg = hDlg;
@@ -622,6 +655,10 @@ LRESULT CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 if (IsDlgButtonChecked(hDlg, IDC_OFFSETS) == BST_CHECKED)
                 {
                     yrOpts.offsets = TRUE;
+                    if (IsDlgButtonChecked(hDlg, IDC_RVA) == BST_CHECKED)
+                    {
+                        yrOpts.rva = TRUE;
+                    }
                 }
 
                 ZeroMemory(maxRulesStr, sizeof(maxRulesStr));

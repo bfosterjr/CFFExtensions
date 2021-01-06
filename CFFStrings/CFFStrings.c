@@ -23,6 +23,7 @@ HANDLE      g_event         = NULL;
 PVOID       g_lastObj       = NULL;
 BOOL        g_showOffsets   = FALSE;
 BOOL        g_prevascii     = FALSE;
+BOOL        g_showRVA       = FALSE;
 
 HINSTANCE hInstance;
 LRESULT CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -34,6 +35,7 @@ typedef struct _THREAD_ARGS
     BOOL    wide;
     BOOL    ascii;
     BOOL    offsets;
+    BOOL    rva;
 }THREAD_ARGS, *PTHREAD_ARGS;
 
 
@@ -68,6 +70,8 @@ UINT nCFFApiMask[] =
 {
     m_eaGetObjectAddress,
     m_eaGetObjectSize,
+    m_eaOffsetToRva,
+    m_eaIsRvaValid,
     (UINT)NULL
 };
 
@@ -75,6 +79,8 @@ typedef struct _CFFAPI
 {
     d_eaGetObjectAddress eaGetObjectAddress;
     d_eaGetObjectSize eaGetObjectSize;
+    d_eaOffsetToRva eaOffsetToRva;
+    d_eaIsRvaValid eaIsRvaValid;
 } CFFAPI, *PCFFAPI;
 
 CFFAPI CFFApi;
@@ -132,7 +138,8 @@ _saveListView
     PCHAR   lineFeed            = "\r\n";
     BOOL    type                = (g_prevascii && g_prevwide);
     BOOL    offset              = g_showOffsets;
-    BOOL    headers             = type || offset;
+    BOOL    rva                 = g_showRVA;
+    BOOL    headers             = type || offset || rva;
     LVITEM  lvi                 = { 0 };
     CHAR    typeStr[2]          = { 0 };
     CHAR    offsetStr[10]       = { 0 };
@@ -152,6 +159,10 @@ _saveListView
                 if (offset)
                 {
                     WriteFile(hFile, "Offset,", sizeof("Offset,") - 1, &bytesWritten, NULL);
+                }
+                if (rva)
+                {
+                    WriteFile(hFile, "RVA,", sizeof("RVA,") - 1, &bytesWritten, NULL);
                 }
                 WriteFile(hFile, "String", sizeof("String") - 1, &bytesWritten, NULL);
                 WriteFile(hFile, lineFeed, 2, &bytesWritten, NULL);
@@ -192,13 +203,27 @@ _saveListView
                                 WriteFile(hFile, ",", 1, &bytesWritten, NULL);
                             }
                         }
+                        if (rva)
+                        {
+                            ZeroMemory(offsetStr, sizeof(offsetStr));
+                            lvi.mask = LVIF_TEXT;
+                            lvi.iItem = i;
+                            lvi.iSubItem = type + offset;
+                            lvi.cchTextMax = sizeof(offsetStr);
+                            lvi.pszText = offsetStr;
+                            if (0 < (len = (int)SendDlgItemMessageA(hDlg, IDC_STRINGLIST, LVM_GETITEMTEXT, i, (LPARAM)&lvi)))
+                            {
+                                WriteFile(hFile, lvi.pszText, len, &bytesWritten, NULL);
+                                WriteFile(hFile, ",", 1, &bytesWritten, NULL);
+                            }
+                        }
                     }
 
                     ZeroMemory(string, sizeof(string));
 
                     lvi.mask = LVIF_TEXT;
                     lvi.iItem = i;
-                    lvi.iSubItem = offset + type;
+                    lvi.iSubItem = offset + rva + type;
                     lvi.cchTextMax = sizeof(string);
                     lvi.pszText = string;
                     if (0 < (len = (int)SendDlgItemMessageA(hDlg, IDC_STRINGLIST, LVM_GETITEMTEXT, i, (LPARAM)&lvi)))
@@ -223,11 +248,7 @@ _saveListView
 static
 void
 _setViewColums
-(
-HWND hDlg,
-BOOL offset,
-BOOL type
-)
+        (HWND hDlg, BOOL offset, BOOL type, BOOL rva)
 {
     LV_COLUMNA lvc = { 0 };
 
@@ -241,6 +262,16 @@ BOOL type
     lvc.cx = PIXELS_PER_CHAR * sizeof("String");
 
     ListView_InsertColumn(GetDlgItem(hDlg, IDC_STRINGLIST), 0, &lvc);
+
+    if (rva)
+    {
+        lvc.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT;
+        lvc.fmt = LVCFMT_LEFT;
+        lvc.pszText = "    RVA       ";
+        lvc.cx = PIXELS_PER_CHAR * sizeof("    RVA       ");
+        ListView_InsertColumn(GetDlgItem(hDlg, IDC_STRINGLIST), 0, &lvc);
+        ListView_SetColumnWidth(GetDlgItem(hDlg, IDC_STRINGLIST), 0, LVSCW_AUTOSIZE_USEHEADER);
+    }
     ListView_SetColumnWidth(GetDlgItem(hDlg, IDC_STRINGLIST), 0, LVSCW_AUTOSIZE_USEHEADER);
 
     if (offset)
@@ -268,16 +299,8 @@ BOOL type
 static
 void
 _insertString
-(
-    HWND hDlg,
-    PCHAR string,
-    int stringlen,
-    BOOL showOffset,
-    int offset,
-    BOOL showType,
-    BOOL wide,
-    int index
-)
+        (HWND hDlg, PCHAR string, int stringlen, BOOL showOffset, int offset, BOOL showType, BOOL wide, int index,
+         BOOL showRVA)
 {
     LV_ITEMA lvi            = { 0 };
     CHAR    stroffset[10]   = { 0 };
@@ -300,6 +323,32 @@ _insertString
     {
         ZeroMemory(stroffset, sizeof(stroffset));
         _snprintf_s(stroffset, sizeof(stroffset), sizeof(stroffset), "%08X", offset);
+
+        lvi.mask = LVIF_TEXT;
+        lvi.pszText = stroffset;
+        lvi.cchTextMax = sizeof(stroffset);
+        lvi.iItem = index;
+        lvi.iSubItem = subitem;
+        SendDlgItemMessageA(hDlg, IDC_STRINGLIST, subitem == 0 ? LVM_INSERTITEMA : LVM_SETITEMA, 0, (LPARAM)&lvi);
+        subitem++;
+    }
+
+    if (showRVA)
+    {
+        VOID *base = CFFApi.eaGetObjectAddress(hDlg);
+        UINT size = CFFApi.eaGetObjectSize(hDlg);
+        DWORD rva = CFFApi.eaOffsetToRva(base, size, offset);
+
+        ZeroMemory(stroffset, sizeof(stroffset));
+        if (CFFApi.eaIsRvaValid(base, size, rva))
+        {
+            _snprintf_s(stroffset, sizeof(stroffset), sizeof(stroffset), "%08X", rva);
+        }
+        else
+        {
+            _snprintf_s(stroffset, sizeof(stroffset), sizeof(stroffset), "%8s", "NULL");
+
+        }
 
         lvi.mask = LVIF_TEXT;
         lvi.pszText = stroffset;
@@ -334,14 +383,7 @@ HWND hDlg
 static
 BOOL
 _findStrings
-(
-    HWND    hDlg,
-    DWORD   minLength,
-    BOOL    ascii,
-    BOOL    wide,
-    BOOL    showOffset,
-    BOOL    searchBoth
-)
+        (HWND hDlg, DWORD minLength, BOOL ascii, BOOL wide, BOOL showOffset, BOOL searchBoth, BOOL showRVA)
 {
 
     PBYTE   fileptr     = g_object;
@@ -392,7 +434,7 @@ _findStrings
 
                 if ((ascii && !iswide) || (wide && iswide))
                 {
-                    _insertString(hDlg, str, strlen + 1, showOffset, offset, searchBoth, iswide, index);
+                    _insertString(hDlg, str, strlen + 1, showOffset, offset, searchBoth, iswide, index, showRVA);
                     index++;
                 }
             }
@@ -416,7 +458,7 @@ _findStrings
             stop = TRUE;
         }
     }
-    ListView_SetColumnWidth(GetDlgItem(hDlg, IDC_STRINGLIST), showOffset + searchBoth, longestStr * PIXELS_PER_CHAR);
+    ListView_SetColumnWidth(GetDlgItem(hDlg, IDC_STRINGLIST), showOffset + searchBoth + showRVA, longestStr * PIXELS_PER_CHAR);
 
     if (!stop)
     {
@@ -447,26 +489,30 @@ _findStringThreadFunc
         hDlg = findStringsArg->hDlg;
         Edit_SetText(GetDlgItem(hDlg, IDC_STATUS), "");
         _resetStringList(hDlg);
-        _setViewColums(hDlg, findStringsArg->offsets, 
-                        findStringsArg->ascii && findStringsArg->wide);
+        _setViewColums(hDlg, findStringsArg->offsets,
+                       findStringsArg->ascii && findStringsArg->wide,
+                       findStringsArg->rva);
         SendDlgItemMessageA(hDlg, IDC_PROGRESS, PBM_SETPOS, 0, (LPARAM)0);
         g_stringsdone = FALSE;
         g_prevascii = FALSE;
         g_prevwide = FALSE;
         g_lastObj = g_object;
         g_showOffsets = findStringsArg->offsets;
+        g_showRVA = findStringsArg->rva;
         if (!stop && findStringsArg->ascii)
         {
             stop = _findStrings(findStringsArg->hDlg, findStringsArg->minLen,
-                findStringsArg->ascii, 0,
-                findStringsArg->offsets, findStringsArg->wide && findStringsArg->ascii);
+                                findStringsArg->ascii, 0,
+                                findStringsArg->offsets, findStringsArg->wide && findStringsArg->ascii,
+                                findStringsArg->rva);
             g_prevascii = TRUE;
         }
         if (!stop && findStringsArg->wide)
         {
             stop = _findStrings(findStringsArg->hDlg, findStringsArg->minLen,
-                0, findStringsArg->wide,
-                findStringsArg->offsets, findStringsArg->wide && findStringsArg->ascii);
+                                0, findStringsArg->wide,
+                                findStringsArg->offsets, findStringsArg->wide && findStringsArg->ascii,
+                                findStringsArg->rva);
             g_prevwide = TRUE;
         }
         g_stringsdone = TRUE;
@@ -497,7 +543,7 @@ LRESULT CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
     case WM_INITDIALOG:
     {
-        _setViewColums(hDlg,FALSE,FALSE);
+        _setViewColums(hDlg,FALSE,FALSE, FALSE);
         SendDlgItemMessageA(hDlg, IDC_PROGRESS, PBM_SETSTEP, 1, (LPARAM)0);
         CheckDlgButton(hDlg, IDC_ASCII, BST_CHECKED);
         g_object = (PBYTE)CFFApi.eaGetObjectAddress(hDlg);
@@ -565,6 +611,11 @@ LRESULT CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
                     if (IsDlgButtonChecked(hDlg, IDC_ASCII) == BST_CHECKED)
                     {
                         findStringsArg->ascii = TRUE;
+                    }
+
+                    if (IsDlgButtonChecked(hDlg, IDC_RVA) == BST_CHECKED)
+                    {
+                        findStringsArg->rva = TRUE;
                     }
 
                     findStringsArg->hDlg = hDlg;
